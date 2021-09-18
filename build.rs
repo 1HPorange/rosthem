@@ -4,7 +4,12 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    pkg_config::Config::new().probe("coap-3").unwrap();
+    println!("cargo:rustc-link-search=/usr/local/lib");
+    println!("cargo:rustc-link-search=/usr/local/share");
+
+    // Tell cargo to tell rustc to link the system bzip2
+    // shared library.
+    println!("cargo:rustc-link-lib=coap-3");
 
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=coap.h");

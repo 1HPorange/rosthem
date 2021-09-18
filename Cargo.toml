@@ -13,4 +13,3 @@ angular-units = "0.2" # for prisma
 
 [build-dependencies]
 bindgen = "0.59.1"
-pkg-config = "0.3.19"

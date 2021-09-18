@@ -1,6 +1,7 @@
 pub mod error;
 mod ffi;
 pub mod light;
+pub mod session_ext;
 
 use self::error::CoapError;
 use ffi::*;
@@ -331,6 +332,14 @@ impl CoapOptList {
 
             Ok(())
         }
+    }
+
+    pub fn add_path_segment(&self, segment: &str) -> Result<(), CoapError> {
+        coap_insert_optlist(
+            &self.inner as *const _ as *mut _,
+            coap_new_optlist(COAP_OPTION_URI_PATH as u16, segment.len(), segment.as_ptr()),
+        );
+        Ok(())
     }
 }
 

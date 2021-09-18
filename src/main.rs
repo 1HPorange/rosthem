@@ -1,8 +1,11 @@
-use std::{net::Ipv4Addr, thread::sleep, time::Duration};
+use std::{thread::sleep, time::Duration};
 
+use angular_units::Deg;
 use prisma::{FromColor, Hsv, Rgb};
 use rosthem::*;
+use serde::Deserialize;
 
+#[derive(Deserialize)]
 struct Config {
     uri: String,
     ip: String,
@@ -14,7 +17,7 @@ fn main() -> Result<(), CoapError> {
     const IO_FREQUENCY: Option<Duration> = Some(Duration::from_millis(100));
 
     let config: Config =
-        serde_json::from_str(std::fs::read("/config.json").expect("Missing config"))
+        serde_json::from_str(&std::fs::read_to_string("./config.json").expect("Missing config"))
             .expect("Invalid config");
 
     let coap = Coap::new(None)?;
@@ -26,7 +29,7 @@ fn main() -> Result<(), CoapError> {
 
     let session = context.new_session(
         config.ip.parse().expect("Invalid IP"),
-        &config.uri,
+        uri,
         &config.user,
         &config.key,
         true,

@@ -9,7 +9,7 @@ edition = "2018"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 prisma = "0.1"
-angular-units = "0.2" # for prisma
+angular-units = "0.2" # for prisma TODO: Remove
 
 [build-dependencies]
 bindgen = "0.59.1"

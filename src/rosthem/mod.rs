@@ -287,13 +287,13 @@ impl Drop for CoapOptList {
 }
 
 impl CoapOptList {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             inner: ptr::null_mut(),
         }
     }
 
-    pub(crate) fn add_uri_path_segments(&self, uri: &CoapUri) -> Result<(), CoapError> {
+    pub fn add_uri_path_segments(&self, uri: &CoapUri) -> Result<(), CoapError> {
         unsafe {
             if uri.native.path.length > 0 {
                 let mut uri_path_buf_len = [0u8; 256]; // PERF: Uninitialized

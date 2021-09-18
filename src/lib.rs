@@ -1,13 +1,8 @@
-mod libcoap;
+mod rosthem;
 
-use angular_units::Deg;
-pub use libcoap::{
+pub use rosthem::{
     error::CoapError,
     light::{LightColorPreset, LightInfo},
-    *,
+    Coap, CoapAddress, CoapContext, CoapLogLevel, CoapMethod, CoapOptList, CoapPdu, CoapPduBuilder,
+    CoapSession, CoapUri,
 };
-use prisma::FromColor;
-use prisma::{Hsv, Rgb};
-use std::net::Ipv4Addr;
-use std::thread::sleep;
-use std::time::Duration;

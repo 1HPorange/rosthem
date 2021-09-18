@@ -335,11 +335,13 @@ impl CoapOptList {
     }
 
     pub fn add_path_segment(&self, segment: &str) -> Result<(), CoapError> {
-        coap_insert_optlist(
-            &self.inner as *const _ as *mut _,
-            coap_new_optlist(COAP_OPTION_URI_PATH as u16, segment.len(), segment.as_ptr()),
-        );
-        Ok(())
+        unsafe {
+            coap_insert_optlist(
+                &self.inner as *const _ as *mut _,
+                coap_new_optlist(COAP_OPTION_URI_PATH as u16, segment.len() as u32, segment.as_ptr()),
+            );
+            Ok(())
+        }
     }
 }
 

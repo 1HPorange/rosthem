@@ -20,7 +20,7 @@ fn main() -> Result<(), CoapError> {
         serde_json::from_str(&std::fs::read_to_string("./config.json").expect("Missing config"))
             .expect("Invalid config");
 
-    let coap = Coap::new(None)?;
+    let coap = Coap::new(Some(CoapLogLevel::Debug))?;
     let context = coap.new_context()?;
 
     let uri = CoapUri::new(config.uri)?;
@@ -35,21 +35,24 @@ fn main() -> Result<(), CoapError> {
         true,
     )?;
 
-    let pdu = CoapPduBuilder::new(&session, CoapMethod::Put).with_optlist(&optlist);
+    session.request_status("65539")?;
+    context.run(IO_FREQUENCY)?;
+    
+    // let pdu = CoapPduBuilder::new(&session, CoapMethod::Put).with_optlist(&optlist);
 
-    const STEPS: usize = 8;
-    for i in 0..=STEPS {
-        let hsv = Hsv::new(Deg(359.99 * (i as f32) / (STEPS as f32)), 1.0f32, 1.0f32);
-        let light_control = LightInfo::new()
-            .on(true)
-            .brightness(254)
-            .color_rgb(&Rgb::from_color(&hsv));
+    // const STEPS: usize = 8;
+    // for i in 0..=STEPS {
+    //     let hsv = Hsv::new(Deg(359.99 * (i as f32) / (STEPS as f32)), 1.0f32, 1.0f32);
+    //     let light_control = LightInfo::new()
+    //         .on(true)
+    //         .brightness(254)
+    //         .color_rgb(&Rgb::from_color(&hsv));
 
-        let pdu = pdu.build_with_payload(light_control)?;
-        session.send_pdu(pdu)?;
-        context.run(IO_FREQUENCY)?;
-        sleep(Duration::from_secs(2));
-    }
+    //     let pdu = pdu.build_with_payload(light_control)?;
+    //     session.send_pdu(pdu)?;
+    //     context.run(IO_FREQUENCY)?;
+    //     sleep(Duration::from_secs(2));
+    // }
 
     Ok(())
 }

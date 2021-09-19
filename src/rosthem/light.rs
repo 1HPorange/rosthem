@@ -24,6 +24,10 @@ impl LightInfo {
         self
     }
 
+    pub fn get_on(&self) -> Option<bool> {
+        self.light_options[0].on_off.map(|o| o != 0)
+    }
+
     pub fn brightness(mut self, mut brightness: u8) -> Self {
         brightness = brightness
             .saturating_sub(1)
@@ -35,6 +39,10 @@ impl LightInfo {
         self
     }
 
+    pub fn get_brightness(&self) -> Option<u8> {
+        self.light_options[0].brightness
+    }
+
     pub fn color_preset(mut self, preset: LightColorPreset) -> Self {
         self.light_options[0].color_x = None;
         self.light_options[0].color_y = None;
@@ -42,11 +50,19 @@ impl LightInfo {
         self
     }
 
+    pub fn get_color_preset(&self) -> Option<LightColorPreset> {
+        self.light_options[0].color_preset.and_then(|p| LightColorPreset::from_hex(p.as_ref()))
+    }
+
     pub fn color_xy(mut self, x: u16, y: u16) -> Self {
         self.light_options[0].color_preset = None;
         self.light_options[0].color_x = Some(x);
         self.light_options[0].color_y = Some(y);
         self
+    }
+
+    pub fn get_color_xy(&self, x: u16, y: u16) -> Option<(u16, u16)> {
+        self.light_options[0].color_x.zip(self.light_options[0].color_y)
     }
 
     pub fn color_rgb(mut self, rgb: &Rgb<f32>) -> Self {
@@ -123,7 +139,7 @@ impl LightColorPreset {
         }
     }
 
-    fn _from_hex(hex: &str) -> Option<Self> {
+    fn from_hex(hex: &str) -> Option<Self> {
         match hex {
             "4a418a" => Some(Self::Blue),
             "6c83ba" => Some(Self::LightBlue),

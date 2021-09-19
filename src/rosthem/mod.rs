@@ -124,12 +124,15 @@ impl CoapContext<'_> {
                 &mut Pin::get_unchecked_mut(dtls_psk.as_mut()).native,
             );
 
-            let coap_session = NonNull::new(session)
+            let mut coap_session = NonNull::new(session)
                 .ok_or(CoapError::FailedToCreateSession)
                 .map(|inner| CoapSession {
                     inner,
+                    last_token: CoapToken { token: [0; 8] },
                     _context: self,
                 })?;
+
+            coap_session_init_token(coap_session.inner.as_ptr(), coap_session.last_token.token.len(), coap_session.last_token.token.as_mut_ptr());
 
             if warmup {
                 self.run(Some(Duration::from_millis(1500)))?; // TODO: Is this number sensible?
@@ -158,6 +161,7 @@ impl CoapContext<'_> {
 
 pub struct CoapSession<'a> {
     inner: NonNull<coap_session_t>,
+    last_token: CoapToken,
     _context: &'a CoapContext<'a>,
 }
 
@@ -167,9 +171,11 @@ impl Drop for CoapSession<'_> {
     }
 }
 
-impl CoapSession<'_> {
-    pub fn send_pdu(&self, pdu: CoapPdu) -> Result<(), CoapError> {
+impl<'a> CoapSession<'a> {
+    pub fn send_pdu<P>(&mut self, pdu: CoapPduBuilder<'a, P>) -> Result<(), CoapError> {
         unsafe {
+            let pdu = pdu.with_token(&self.last_token).build()?;
+            coap_session_new_token(self.inner.as_ptr(), &mut self.last_token.len, self.last_token.token.as_ptr());
             coap_send(self.inner.as_ptr(), pdu.inner.as_ptr());
             Ok(())
         }
@@ -345,6 +351,17 @@ impl CoapOptList {
     }
 }
 
+struct CoapToken {
+    len: u8,
+    token: [u8; 8],
+}
+
+impl CoapToken {
+    fn new() -> Self {
+        Self { len: 8, token: [0; 8] }
+    }
+}
+
 #[repr(u32)]
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum CoapMethod {
@@ -389,6 +406,19 @@ impl<'a> CoapPdu<'a> {
         }
     }
 
+    pub fn add_token(&self, token: &CoapToken) -> Result<(), CoapError> {
+        unsafe {
+            coap_add_token(self.inner.as_ptr(), token.len, token.token.as_ptr());
+        }
+    }
+
+    fn add_optlist(&self, optlist: &CoapOptList) -> Result<(), CoapError> {
+        unsafe {
+            coap_add_optlist_pdu(self.inner.as_ptr(), &optlist.inner as *const _ as *mut _); // TODO: Failure case
+            Ok(())
+        }
+    }
+
     fn add_payload<P: Serialize>(&mut self, payload: P) -> Result<(), CoapError> {
         if self.has_payload {
             return Err(CoapError::AlreadyHasPayload);
@@ -416,47 +446,54 @@ impl<'a> CoapPdu<'a> {
             Ok(())
         }
     }
-
-    fn add_optlist(&self, optlist: &CoapOptList) -> Result<(), CoapError> {
-        unsafe {
-            coap_add_optlist_pdu(self.inner.as_ptr(), &optlist.inner as *const _ as *mut _); // TODO: Failure case
-            Ok(())
-        }
-    }
 }
 
 #[derive(Copy, Clone)]
-pub struct CoapPduBuilder<'a> {
+pub struct CoapPduBuilder<'a, P> {
     session: &'a CoapSession<'a>,
     method: CoapMethod,
+    token: Option<&'a CoapToken>,
     optlist: Option<&'a CoapOptList>,
+    payload: Option<P>,
 }
 
-impl<'a> CoapPduBuilder<'a> {
-    pub fn new(session: &'a CoapSession, method: CoapMethod) -> CoapPduBuilder<'a> {
+impl<'a, P> CoapPduBuilder<'a, P> {
+    pub fn new(session: &'a CoapSession, method: CoapMethod) -> CoapPduBuilder<'a, ()> {
         CoapPduBuilder {
             session,
             method,
+            token: None,
             optlist: None,
+            payload: None,
         }
     }
+    
+    fn with_token(mut self, token: &CoapToken) -> CoapPduBuilder<'a, P> {
+        self.token = Some(token);
+        self
+    }
 
-    pub fn with_optlist(mut self, optlist: &'a CoapOptList) -> CoapPduBuilder<'a> {
+    pub fn with_optlist(mut self, optlist: &'a CoapOptList) -> CoapPduBuilder<'a, P> {
         self.optlist = Some(optlist);
         self
     }
 
-    pub fn build(self) -> Result<CoapPdu<'a>, CoapError> {
-        let pdu = CoapPdu::new(self.session, self.method)?;
+    pub fn with_payload<P: Serialize>(mut self, payload: P) -> CoapPduBuilder<'a, P> {
+        self.payload = Some(payload);
+        self
+    }
+
+    fn build(self) -> Result<CoapPdu<'a>, CoapError> {
+        let mut pdu = CoapPdu::new(self.session, self.method)?;
+        if let Some(token) = token {
+            pdu.add_token(token)?;
+        }
         if let Some(optlist) = self.optlist {
             pdu.add_optlist(optlist)?;
         }
-        Ok(pdu)
-    }
-
-    pub fn build_with_payload<P: Serialize>(self, payload: P) -> Result<CoapPdu<'a>, CoapError> {
-        let mut pdu = self.build()?;
-        pdu.add_payload(payload)?;
+        if let Some(payload) = self.payload {
+            pdu.add_payload(payload)
+        }
         Ok(pdu)
     }
 }

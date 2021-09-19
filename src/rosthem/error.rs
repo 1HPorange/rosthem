@@ -12,4 +12,5 @@ pub enum CoapError {
     UriTooLong,
     SerializeError,
     AlreadyHasPayload,
+    PayloadEncodingError,
 }

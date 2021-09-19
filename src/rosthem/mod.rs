@@ -13,6 +13,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
+use std::ops::ControlFlow;
 
 static COAP_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -135,25 +136,31 @@ impl CoapContext<'_> {
             coap_session_init_token(coap_session.inner.as_ptr(), coap_session.last_token.token.len() as u32, coap_session.last_token.token.as_mut_ptr());
 
             if warmup {
-                self.run(Some(Duration::from_millis(1500)))?; // TODO: Is this number sensible?
+                self.run(Some(Duration::from_millis(1500)), None)?; // TODO: Is this number sensible?
             }
 
             Ok(coap_session)
         }
     }
 
-    pub fn run(&self, timeout_ms: Option<Duration>) -> Result<(), CoapError> {
-        let ffi_timeout_ms = timeout_ms.map(|d| d.as_millis() as u32).unwrap_or(0); // The special value of 0 means block until IO is available (so potentially forever)
-        loop {
-            let result = unsafe { coap_io_process(self.inner.as_ptr(), ffi_timeout_ms) };
+    pub fn run<F: Fn(CoapToken, serde_json::Value)>(&self, timeout_ms: Option<Duration>, handle_response: Option<Box<F>>) -> Result<(), CoapError> {
+        unsafe {
+            USER_RESPONSE_HANDLER = handle_response;
 
-            if result == -1 {
-                return Err(CoapError::IoError);
-            } else if timeout_ms
-                .map(|timeout_ms| (result - timeout_ms.as_millis() as i32).abs() < 5)
-                .unwrap_or(false)
-            {
-                return Ok(());
+            let ffi_timeout_ms = timeout_ms.map(|d| d.as_millis() as u32).unwrap_or(0); // The special value of 0 means block until IO is available (so potentially forever)
+            loop {
+                let result = unsafe { coap_io_process(self.inner.as_ptr(), ffi_timeout_ms) };
+
+                if result == -1 {
+                    USER_RESPONSE_HANDLER = None;
+                    return Err(CoapError::IoError);
+                } else if timeout_ms
+                    .map(|timeout_ms| (result - timeout_ms.as_millis() as i32).abs() < 5)
+                    .unwrap_or(false)
+                {
+                    USER_RESPONSE_HANDLER = None;
+                    return Ok(());
+                }
             }
         }
     }
@@ -172,13 +179,14 @@ impl Drop for CoapSession<'_> {
 }
 
 impl CoapSession<'_> {
-    pub fn send_pdu<P: Serialize>(&mut self, pdu: CoapPduBuilder<'_, P>) -> Result<(), CoapError> {
+    pub fn send_pdu<P: Serialize>(&mut self, pdu: CoapPduBuilder<'_, P>) -> Result<CoapToken, CoapError> {
         let pdu = pdu.with_token(&self.last_token).build(self)?;
+        let token = self.last_token.clone();
 
         unsafe {
             coap_session_new_token(self.inner.as_ptr(), &mut self.last_token.len, self.last_token.token.as_mut_ptr());
             coap_send(self.inner.as_ptr(), pdu.inner.as_ptr());
-            Ok(())
+            Ok(token)
         }
     }
 }
@@ -352,9 +360,22 @@ impl CoapOptList {
     }
 }
 
-struct CoapToken {
+#[derive(PartialEq, Copy, Clone)]
+pub struct CoapToken {
     len: u32,
     token: [u8; 8],
+}
+
+impl From<coap_bin_const_t > for CoapToken {
+    fn from(data: coap_bin_const_t) -> Self {
+        let mut token = [0; 8];
+        token[..data.length as usize].copy_from_slice(unsafe { std::slice::from_raw_parts(data.s, data.length as usize) });
+
+        Self {
+            len: data.length as u32,
+            token
+        }
+    }
 }
 
 impl CoapToken {
@@ -492,16 +513,32 @@ impl<'a, P> CoapPduBuilder<'a, P> {
     }
 }
 
+static mut USER_RESPONSE_HANDLER: Option<Box<dyn Fn(CoapToken, serde_json::Value)>> = None;
+
 unsafe extern "C" fn handle_response(
     _session: *mut coap_session_t,
     _sent: *const coap_pdu_t,
     received: *const coap_pdu_t,
     _mid: coap_mid_t,
 ) -> coap_response_t {
-    let _rcv_code = coap_pdu_get_code(received);
-    let _rcv_type = coap_pdu_get_type(received);
+    // let _rcv_code = coap_pdu_get_code(received);
+    // let _rcv_type = coap_pdu_get_type(received);
 
-    // println!("A got sometin");
+    if let Some(user_response_handler) = &USER_RESPONSE_HANDLER {
+        let token = CoapToken::from(coap_pdu_get_token(received));
+
+        let mut data_len = 0usize;
+        let mut data_ptr = ptr::null();
+
+        if coap_get_data_large(received, &mut data_len, &mut data_ptr, ptr::null_mut(), ptr::null_mut()) == 1 {
+            // TODO: Log failures
+            if let Ok(json) = std::str::from_utf8(std::slice::from_raw_parts(data_ptr, data_len)).and_then(serde_json::from_str::<serde_json::Value>) {
+                user_response_handler(token, json);
+            }
+        }
+    }
+
+    // println!("A got something");
     // coap_show_pdu(coap_log_t_LOG_DEBUG, received);
     return coap_response_t_COAP_RESPONSE_OK;
 

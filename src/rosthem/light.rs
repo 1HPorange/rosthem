@@ -3,9 +3,10 @@ use prisma::color_space::ConvertToXyz;
 use prisma::encoding::EncodableColor;
 use prisma::FromColor;
 use prisma::{Rgb, XyY};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
+use std::borrow::Cow;
 
-#[derive(Serialize, Copy, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LightInfo {
     #[serde(rename = "3311")]
     light_options: [LightOptions; 1],
@@ -37,7 +38,7 @@ impl LightInfo {
     pub fn color_preset(mut self, preset: LightColorPreset) -> Self {
         self.light_options[0].color_x = None;
         self.light_options[0].color_y = None;
-        self.light_options[0].color_preset = Some(preset.to_hex());
+        self.light_options[0].color_preset = Some(preset.to_hex().into());
         self
     }
 
@@ -57,14 +58,14 @@ impl LightInfo {
     }
 }
 
-#[derive(Serialize, Copy, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug)]
 struct LightOptions {
     #[serde(rename = "5850", skip_serializing_if = "Option::is_none")]
     on_off: Option<u8>,
     #[serde(rename = "5851", skip_serializing_if = "Option::is_none")]
     brightness: Option<u8>,
     #[serde(rename = "5706", skip_serializing_if = "Option::is_none")]
-    color_preset: Option<&'static str>,
+    color_preset: Option<Cow<'static, str>>,
     #[serde(rename = "5709", skip_serializing_if = "Option::is_none")]
     color_x: Option<u16>,
     #[serde(rename = "5710", skip_serializing_if = "Option::is_none")]

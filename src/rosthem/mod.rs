@@ -4,6 +4,7 @@ pub mod error;
 mod ffi;
 pub mod light;
 pub mod session_ext;
+pub mod device_info;
 
 use self::error::CoapError;
 use ffi::*;

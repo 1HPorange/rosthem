@@ -60,5 +60,5 @@ fn main() -> Result<(), CoapError> {
 }
 
 fn handle_response(_token: CoapToken, data: serde_json::Value) {
-    dbg!(data);
+    let _data = println!("{:?}", serde_json::from_value::<DeviceInfo>(data));
 }

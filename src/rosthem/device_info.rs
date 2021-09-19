@@ -1,8 +1,8 @@
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use crate::LightInfo;
 use std::borrow::Cow;
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DeviceInfo {
     #[serde(rename = "9001", skip_serializing_if = "Option::is_none")]
     pub label: Option<Cow<'static, str>>,
@@ -14,7 +14,7 @@ pub struct DeviceInfo {
     pub light_info: Option<LightInfo>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProductInfo {
     #[serde(rename = "0", skip_serializing_if = "Option::is_none")]
     pub manufacturer: Option<Cow<'static, str>>,

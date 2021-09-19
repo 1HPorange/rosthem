@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use std::{thread::sleep, time::Duration};
 
 use angular_units::Deg;
@@ -27,7 +29,7 @@ fn main() -> Result<(), CoapError> {
     let optlist = CoapOptList::new();
     optlist.add_uri_path_segments(&uri)?;
 
-    let session = context.new_session(
+    let mut session = context.new_session(
         config.ip.parse().expect("Invalid IP"),
         uri,
         &config.user,
@@ -35,24 +37,23 @@ fn main() -> Result<(), CoapError> {
         true,
     )?;
 
-    session.request_status("65539")?;
-    context.run(IO_FREQUENCY)?;
+    // session.request_status("65539")?;
+    // context.run(IO_FREQUENCY)?;
     
-    // let pdu = CoapPduBuilder::new(&session, CoapMethod::Put).with_optlist(&optlist);
+    let pdu = CoapPduBuilder::new(CoapMethod::Put).with_optlist(&optlist);
 
-    // const STEPS: usize = 8;
-    // for i in 0..=STEPS {
-    //     let hsv = Hsv::new(Deg(359.99 * (i as f32) / (STEPS as f32)), 1.0f32, 1.0f32);
-    //     let light_control = LightInfo::new()
-    //         .on(true)
-    //         .brightness(254)
-    //         .color_rgb(&Rgb::from_color(&hsv));
+    const STEPS: usize = 8;
+    for i in 0..=STEPS {
+        let hsv = Hsv::new(Deg(359.99 * (i as f32) / (STEPS as f32)), 1.0f32, 1.0f32);
+        let light_control = LightInfo::new()
+            .on(true)
+            .brightness(254)
+            .color_rgb(&Rgb::from_color(&hsv));
 
-    //     let pdu = pdu.build_with_payload(light_control)?;
-    //     session.send_pdu(pdu)?;
-    //     context.run(IO_FREQUENCY)?;
-    //     sleep(Duration::from_secs(2));
-    // }
+        session.send_pdu(pdu.with_payload(light_control))?;
+        context.run(IO_FREQUENCY)?;
+        sleep(Duration::from_secs(2));
+    }
 
     Ok(())
 }

@@ -3,33 +3,32 @@ use crate::{CoapError, CoapOptList, CoapPduBuilder, CoapSession, LightInfo, Coap
 const IKEA_GATEWAY_PATH_SEGMENT: &'static str = "15001";
 
 pub trait CoapSessionExt {
-    fn request_status(&self, id: &'static str) -> Result<serde_json::Value, CoapError>;
-    fn update_light(&self, id: &'static str, command: LightInfo) -> Result<(), CoapError>;
+    fn request_status(&mut self, id: &'static str) -> Result<serde_json::Value, CoapError>;
+    fn update_light(&mut self, id: &'static str, command: LightInfo) -> Result<(), CoapError>;
 }
 
 impl CoapSessionExt for CoapSession<'_> {
-    fn request_status(&self, id: &'static str) -> Result<serde_json::Value, CoapError> {
+    fn request_status(&mut self, id: &'static str) -> Result<serde_json::Value, CoapError> {
         let optlist = CoapOptList::new();
         optlist.add_path_segment(IKEA_GATEWAY_PATH_SEGMENT)?;
         optlist.add_path_segment(id)?;
 
-        let pdu = CoapPduBuilder::new(&self, CoapMethod::Get)
-            .with_optlist(&optlist)
-            .build()?;
+        let pdu = CoapPduBuilder::new(CoapMethod::Get)
+            .with_optlist(&optlist);
 
         self.send_pdu(pdu)?;
 
         Ok(serde_json::json!(null))
     }
 
-    fn update_light(&self, id: &'static str, command: LightInfo) -> Result<(), CoapError> {
+    fn update_light(&mut self, id: &'static str, command: LightInfo) -> Result<(), CoapError> {
         let optlist = CoapOptList::new();
         optlist.add_path_segment(IKEA_GATEWAY_PATH_SEGMENT)?;
         optlist.add_path_segment(id)?;
 
-        let pdu = CoapPduBuilder::new(&self, CoapMethod::Put)
+        let pdu = CoapPduBuilder::new(CoapMethod::Put)
             .with_optlist(&optlist)
-            .build_with_payload(command)?;
+            .with_payload(command);
 
         self.send_pdu(pdu)?;
 

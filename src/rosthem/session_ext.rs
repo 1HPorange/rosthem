@@ -3,12 +3,12 @@ use crate::{CoapError, CoapOptList, CoapPduBuilder, CoapSession, LightInfo, Coap
 const IKEA_GATEWAY_PATH_SEGMENT: &'static str = "15001";
 
 pub trait CoapSessionExt {
-    fn request_status(&mut self, id: &'static str) -> Result<serde_json::Value, CoapError>;
+    fn request_status(&mut self, id: &'static str) -> Result<(), CoapError>;
     fn update_light(&mut self, id: &'static str, command: LightInfo) -> Result<(), CoapError>;
 }
 
 impl CoapSessionExt for CoapSession<'_> {
-    fn request_status(&mut self, id: &'static str) -> Result<serde_json::Value, CoapError> {
+    fn request_status(&mut self, id: &'static str) -> Result<(), CoapError> {
         let optlist = CoapOptList::new();
         optlist.add_path_segment(IKEA_GATEWAY_PATH_SEGMENT)?;
         optlist.add_path_segment(id)?;
@@ -18,7 +18,7 @@ impl CoapSessionExt for CoapSession<'_> {
 
         self.send_pdu(pdu)?;
 
-        Ok(serde_json::json!(null))
+        Ok(())
     }
 
     fn update_light(&mut self, id: &'static str, command: LightInfo) -> Result<(), CoapError> {

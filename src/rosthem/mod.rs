@@ -1,3 +1,5 @@
+// TODO: Use size_t/usize properly where I failed to do it
+
 pub mod error;
 mod ffi;
 pub mod light;
@@ -13,7 +15,6 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
-use std::ops::ControlFlow;
 
 static COAP_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -143,13 +144,13 @@ impl CoapContext<'_> {
         }
     }
 
-    pub fn run<F: Fn(CoapToken, serde_json::Value)>(&self, timeout_ms: Option<Duration>, handle_response: Option<Box<F>>) -> Result<(), CoapError> {
+    pub fn run(&self, timeout_ms: Option<Duration>, handle_response: Option<Box<dyn Fn(CoapToken, serde_json::Value)>>) -> Result<(), CoapError> {
         unsafe {
             USER_RESPONSE_HANDLER = handle_response;
 
             let ffi_timeout_ms = timeout_ms.map(|d| d.as_millis() as u32).unwrap_or(0); // The special value of 0 means block until IO is available (so potentially forever)
             loop {
-                let result = unsafe { coap_io_process(self.inner.as_ptr(), ffi_timeout_ms) };
+                let result = coap_io_process(self.inner.as_ptr(), ffi_timeout_ms);
 
                 if result == -1 {
                     USER_RESPONSE_HANDLER = None;
@@ -369,7 +370,9 @@ pub struct CoapToken {
 impl From<coap_bin_const_t > for CoapToken {
     fn from(data: coap_bin_const_t) -> Self {
         let mut token = [0; 8];
-        token[..data.length as usize].copy_from_slice(unsafe { std::slice::from_raw_parts(data.s, data.length as usize) });
+        if data.length > 0 {
+            token[..data.length as usize].copy_from_slice(unsafe { std::slice::from_raw_parts(data.s, data.length as usize) });
+        }
 
         Self {
             len: data.length as u32,
@@ -527,19 +530,21 @@ unsafe extern "C" fn handle_response(
     if let Some(user_response_handler) = &USER_RESPONSE_HANDLER {
         let token = CoapToken::from(coap_pdu_get_token(received));
 
-        let mut data_len = 0usize;
+        let mut data_len = 0u32;
         let mut data_ptr = ptr::null();
+        let mut data_offset = 0u32;
+        let mut data_total = 0u32;
 
-        if coap_get_data_large(received, &mut data_len, &mut data_ptr, ptr::null_mut(), ptr::null_mut()) == 1 {
+        if coap_get_data_large(received, &mut data_len, &mut data_ptr, &mut data_offset, &mut data_total) == 1 {
             // TODO: Log failures
-            if let Ok(json) = std::str::from_utf8(std::slice::from_raw_parts(data_ptr, data_len)).and_then(serde_json::from_str::<serde_json::Value>) {
+            if let Some(json) = std::str::from_utf8(std::slice::from_raw_parts(data_ptr, data_len as usize)).ok().and_then(|json_text| serde_json::from_str::<serde_json::Value>(json_text).ok()) {
                 user_response_handler(token, json);
             }
         }
     }
 
     // println!("A got something");
-    // coap_show_pdu(coap_log_t_LOG_DEBUG, received);
+    coap_show_pdu(coap_log_t_LOG_DEBUG, received);
     return coap_response_t_COAP_RESPONSE_OK;
 
     // coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",

@@ -5,5 +5,5 @@ pub use rosthem::{
     light::{LightColorPreset, LightInfo},
     session_ext::CoapSessionExt,
     Coap, CoapAddress, CoapContext, CoapLogLevel, CoapMethod, CoapOptList, CoapPduBuilder,
-    CoapSession, CoapUri,
+    CoapSession, CoapUri, CoapToken
 };

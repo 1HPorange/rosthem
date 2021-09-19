@@ -16,13 +16,13 @@ struct Config {
 }
 
 fn main() -> Result<(), CoapError> {
-    const IO_FREQUENCY: Option<Duration> = Some(Duration::from_millis(100));
+    const IO_FREQUENCY: Option<Duration> = Some(Duration::from_millis(3000));
 
     let config: Config =
         serde_json::from_str(&std::fs::read_to_string("./config.json").expect("Missing config"))
             .expect("Invalid config");
 
-    let coap = Coap::new(Some(CoapLogLevel::Debug))?;
+    let coap = Coap::new(None)?;
     let context = coap.new_context()?;
 
     let uri = CoapUri::new(config.uri)?;

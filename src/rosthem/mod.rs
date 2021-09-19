@@ -544,7 +544,7 @@ unsafe extern "C" fn handle_response(
     }
 
     // println!("A got something");
-    coap_show_pdu(coap_log_t_LOG_DEBUG, received);
+    // coap_show_pdu(coap_log_t_LOG_DEBUG, received);
     return coap_response_t_COAP_RESPONSE_OK;
 
     // coap_log(LOG_DEBUG, "** process incoming %d.%02d response:\n",

@@ -51,7 +51,7 @@ impl LightInfo {
     }
 
     pub fn get_color_preset(&self) -> Option<LightColorPreset> {
-        self.light_options[0].color_preset.and_then(|p| LightColorPreset::from_hex(p.as_ref()))
+        self.light_options[0].color_preset.as_ref().and_then(|p| LightColorPreset::from_hex(p.as_ref()))
     }
 
     pub fn color_xy(mut self, x: u16, y: u16) -> Self {
@@ -61,7 +61,7 @@ impl LightInfo {
         self
     }
 
-    pub fn get_color_xy(&self, x: u16, y: u16) -> Option<(u16, u16)> {
+    pub fn get_color_xy(&self) -> Option<(u16, u16)> {
         self.light_options[0].color_x.zip(self.light_options[0].color_y)
     }
 

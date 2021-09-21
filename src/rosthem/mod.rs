@@ -16,6 +16,7 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
+use std::rc::Rc;
 
 static COAP_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -49,7 +50,7 @@ impl Drop for Coap {
 }
 
 impl Coap {
-    pub fn new(log_level: Option<CoapLogLevel>) -> Result<Coap, CoapError> {
+    pub fn new(log_level: Option<CoapLogLevel>) -> Result<Rc<Coap>, CoapError> {
         if let Ok(false) =
             COAP_INITIALIZED.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         {
@@ -60,15 +61,15 @@ impl Coap {
                 coap_dtls_set_log_level(log_level as i32);
                 coap_set_log_level(log_level as u32);
             }
-            Ok(Coap {
+            Ok(Rc::new(Coap {
                 _private: ptr::null(),
-            })
+            }))
         } else {
             Err(CoapError::AlreadyInitialized)
         }
     }
 
-    pub fn new_context<'a>(&'a self) -> Result<CoapContext<'a>, CoapError> {
+    pub fn new_context<'a>(self: &Rc<Self>) -> Result<Rc<CoapContext>, CoapError> {
         unsafe {
             let ctx = coap_new_context(ptr::null());
             // coap_context_set_keepalive(ctx, ping_seconds);
@@ -82,10 +83,10 @@ impl Coap {
                 coap_register_response_handler(ctx.as_ptr(), Some(handle_response));
                 coap_register_event_handler(ctx.as_ptr(), Some(handle_event));
                 coap_register_nack_handler(ctx.as_ptr(), Some(handle_nack));
-                Ok(CoapContext {
+                Ok(Rc::new(CoapContext {
                     inner: ctx,
-                    _coap: self,
-                })
+                    _coap: self.clone(),
+                }))
             } else {
                 Err(CoapError::FailedToCreateContext)
             }
@@ -93,12 +94,12 @@ impl Coap {
     }
 }
 
-pub struct CoapContext<'a> {
+pub struct CoapContext {
     inner: NonNull<coap_context_t>,
-    _coap: &'a Coap,
+    _coap: Rc<Coap>,
 }
 
-impl Drop for CoapContext<'_> {
+impl Drop for CoapContext {
     fn drop(&mut self) {
         unsafe {
             coap_free_context(self.inner.as_ptr());
@@ -106,10 +107,10 @@ impl Drop for CoapContext<'_> {
     }
 }
 
-impl CoapContext<'_> {
+impl CoapContext {
     // TODO: Parse ip from uri
     pub fn new_session(
-        &self,
+        self: &Rc<Self>,
         ip: Ipv4Addr,
         uri: CoapUri,
         identity: &str,
@@ -132,7 +133,7 @@ impl CoapContext<'_> {
                 .map(|inner| CoapSession {
                     inner,
                     last_token: CoapToken::new(),
-                    _context: self,
+                    _context: self.clone(),
                 })?;
 
             coap_session_init_token(coap_session.inner.as_ptr(), coap_session.last_token.token.len() as u32, coap_session.last_token.token.as_mut_ptr());
@@ -168,19 +169,19 @@ impl CoapContext<'_> {
     }
 }
 
-pub struct CoapSession<'a> {
+pub struct CoapSession {
     inner: NonNull<coap_session_t>,
     last_token: CoapToken,
-    _context: &'a CoapContext<'a>,
+    _context: Rc<CoapContext>,
 }
 
-impl Drop for CoapSession<'_> {
+impl Drop for CoapSession {
     fn drop(&mut self) {
         unsafe { coap_session_release(self.inner.as_ptr()) }
     }
 }
 
-impl CoapSession<'_> {
+impl CoapSession {
     pub fn send_pdu<P: Serialize>(&mut self, pdu: CoapPduBuilder<'_, P>) -> Result<CoapToken, CoapError> {
         let pdu = pdu.with_token(&self.last_token).build(self)?;
         let token = self.last_token.clone();
@@ -414,7 +415,7 @@ struct CoapPdu {
 // }
 
 impl CoapPdu {
-    fn new(session: &CoapSession<'_>, method: CoapMethod) -> Result<CoapPdu, CoapError> {
+    fn new(session: &CoapSession, method: CoapMethod) -> Result<CoapPdu, CoapError> {
         unsafe {
             NonNull::new(coap_new_pdu(
                 coap_pdu_type_t_COAP_MESSAGE_CON,

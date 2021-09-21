@@ -441,7 +441,7 @@ impl CoapPdu {
         }
     }
 
-    fn add_payload<P: Serialize>(&mut self, payload: P, session: &CoapSession<'_>) -> Result<(), CoapError> {
+    fn add_payload<P: Serialize>(&mut self, payload: P, session: &CoapSession) -> Result<(), CoapError> {
         unsafe {
             let payload = serde_json::to_string(&payload)
                 .map(|json| Box::new(json.into_bytes()))

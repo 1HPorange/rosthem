@@ -7,7 +7,7 @@ pub trait CoapSessionExt {
     fn update_light(&mut self, id: &'static str, command: LightInfo) -> Result<(), CoapError>;
 }
 
-impl CoapSessionExt for CoapSession<'_> {
+impl CoapSessionExt for CoapSession {
     fn request_status(&mut self, id: &'static str) -> Result<(), CoapError> {
         let optlist = CoapOptList::new();
         optlist.add_path_segment(IKEA_GATEWAY_PATH_SEGMENT)?;

@@ -1,14 +1,16 @@
 // TODO: Use size_t/usize properly where I failed to do it
 
+pub mod device_info;
 pub mod error;
 mod ffi;
 pub mod light;
 pub mod session_ext;
-pub mod device_info;
 
 use self::error::CoapError;
 use ffi::*;
 use serde::Serialize;
+use std::os::raw::c_ulong;
+use std::rc::Rc;
 use std::{
     net::Ipv4Addr,
     pin::Pin,
@@ -16,7 +18,6 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
-use std::rc::Rc;
 
 static COAP_INITIALIZED: AtomicBool = AtomicBool::new(false);
 
@@ -136,7 +137,11 @@ impl CoapContext {
                     _context: self.clone(),
                 })?;
 
-            coap_session_init_token(coap_session.inner.as_ptr(), coap_session.last_token.token.len() as u32, coap_session.last_token.token.as_mut_ptr());
+            coap_session_init_token(
+                coap_session.inner.as_ptr(),
+                coap_session.last_token.token.len() as c_ulong,
+                coap_session.last_token.token.as_mut_ptr(),
+            );
 
             if warmup {
                 self.run(Some(Duration::from_millis(1500)), None)?; // TODO: Is this number sensible?
@@ -146,7 +151,11 @@ impl CoapContext {
         }
     }
 
-    pub fn run(&self, timeout_ms: Option<Duration>, handle_response: Option<Box<dyn Fn(CoapToken, serde_json::Value)>>) -> Result<(), CoapError> {
+    pub fn run(
+        &self,
+        timeout_ms: Option<Duration>,
+        handle_response: Option<Box<dyn Fn(CoapToken, serde_json::Value)>>,
+    ) -> Result<(), CoapError> {
         unsafe {
             USER_RESPONSE_HANDLER = handle_response;
 
@@ -182,12 +191,19 @@ impl Drop for CoapSession {
 }
 
 impl CoapSession {
-    pub fn send_pdu<P: Serialize>(&mut self, pdu: CoapPduBuilder<'_, P>) -> Result<CoapToken, CoapError> {
+    pub fn send_pdu<P: Serialize>(
+        &mut self,
+        pdu: CoapPduBuilder<'_, P>,
+    ) -> Result<CoapToken, CoapError> {
         let pdu = pdu.with_token(&self.last_token).build(self)?;
         let token = self.last_token.clone();
 
         unsafe {
-            coap_session_new_token(self.inner.as_ptr(), &mut self.last_token.len, self.last_token.token.as_mut_ptr());
+            coap_session_new_token(
+                self.inner.as_ptr(),
+                &mut self.last_token.len,
+                self.last_token.token.as_mut_ptr(),
+            );
             coap_send(self.inner.as_ptr(), pdu.inner.as_ptr());
             Ok(token)
         }
@@ -217,9 +233,9 @@ impl CoapDtlsPsk {
             dtls_psk.validate_ih_call_back = None;
 
             dtls_psk.psk_info.identity.s = identity.as_ptr();
-            dtls_psk.psk_info.identity.length = identity.len() as u32;
+            dtls_psk.psk_info.identity.length = identity.len() as c_ulong;
             dtls_psk.psk_info.key.s = key.as_ptr();
-            dtls_psk.psk_info.key.length = key.len() as u32;
+            dtls_psk.psk_info.key.length = key.len() as c_ulong;
 
             let mut psk = Pin::new(Box::new(CoapDtlsPsk {
                 uri,
@@ -246,7 +262,7 @@ impl Clone for CoapUri {
                 uri: self.uri.clone(),
                 native: std::mem::zeroed(),
             };
-            coap_split_uri(uri.uri.as_ptr(), uri.uri.len() as u32, &mut uri.native);
+            coap_split_uri(uri.uri.as_ptr(), uri.uri.len() as c_ulong, &mut uri.native);
             uri
         }
     }
@@ -260,7 +276,7 @@ impl CoapUri {
                 native: std::mem::zeroed(),
             };
 
-            if coap_split_uri(uri.uri.as_ptr(), uri.uri.len() as u32, &mut uri.native) == 0 {
+            if coap_split_uri(uri.uri.as_ptr(), uri.uri.len() as c_ulong, &mut uri.native) == 0 {
                 Ok(uri)
             } else {
                 Err(CoapError::InvalidUri)
@@ -317,11 +333,11 @@ impl CoapOptList {
             if uri.native.path.length > 0 {
                 let mut uri_path_buf_len = [0u8; 256]; // PERF: Uninitialized
 
-                if uri.native.path.length > uri_path_buf_len.len() as u32 {
+                if uri.native.path.length > uri_path_buf_len.len() as c_ulong {
                     return Err(CoapError::UriTooLong);
                 }
 
-                let mut _used_buf_len = uri_path_buf_len.len() as u32;
+                let mut _used_buf_len = uri_path_buf_len.len() as c_ulong;
                 let path_segment_count = coap_split_path(
                     uri.native.path.s,
                     uri.native.path.length,
@@ -338,7 +354,7 @@ impl CoapOptList {
                         &self.inner as *const _ as *mut _,
                         coap_new_optlist(
                             COAP_OPTION_URI_PATH as u16,
-                            coap_opt_length(writable_buf.as_mut_ptr()),
+                            coap_opt_length(writable_buf.as_mut_ptr()) as c_ulong,
                             coap_opt_value(writable_buf.as_mut_ptr()),
                         ),
                     );
@@ -356,7 +372,11 @@ impl CoapOptList {
         unsafe {
             coap_insert_optlist(
                 &self.inner as *const _ as *mut _,
-                coap_new_optlist(COAP_OPTION_URI_PATH as u16, segment.len() as u32, segment.as_ptr()),
+                coap_new_optlist(
+                    COAP_OPTION_URI_PATH as u16,
+                    segment.len() as c_ulong,
+                    segment.as_ptr(),
+                ),
             );
             Ok(())
         }
@@ -365,27 +385,32 @@ impl CoapOptList {
 
 #[derive(PartialEq, Copy, Clone)]
 pub struct CoapToken {
-    len: u32,
+    len: c_ulong,
     token: [u8; 8],
 }
 
-impl From<coap_bin_const_t > for CoapToken {
+impl From<coap_bin_const_t> for CoapToken {
     fn from(data: coap_bin_const_t) -> Self {
         let mut token = [0; 8];
         if data.length > 0 {
-            token[..data.length as usize].copy_from_slice(unsafe { std::slice::from_raw_parts(data.s, data.length as usize) });
+            token[..data.length as usize].copy_from_slice(unsafe {
+                std::slice::from_raw_parts(data.s, data.length as usize)
+            });
         }
 
         Self {
-            len: data.length as u32,
-            token
+            len: data.length as c_ulong,
+            token,
         }
     }
 }
 
 impl CoapToken {
     fn new() -> Self {
-        Self { len: 8, token: [0; 8] }
+        Self {
+            len: 8,
+            token: [0; 8],
+        }
     }
 }
 
@@ -441,7 +466,11 @@ impl CoapPdu {
         }
     }
 
-    fn add_payload<P: Serialize>(&mut self, payload: P, session: &CoapSession) -> Result<(), CoapError> {
+    fn add_payload<P: Serialize>(
+        &mut self,
+        payload: P,
+        session: &CoapSession,
+    ) -> Result<(), CoapError> {
         unsafe {
             let payload = serde_json::to_string(&payload)
                 .map(|json| Box::new(json.into_bytes()))
@@ -453,7 +482,7 @@ impl CoapPdu {
             coap_add_data_large_request(
                 session.inner.as_ptr(),
                 self.inner.as_ptr(),
-                payload_len as u32,
+                payload_len as c_ulong,
                 payload_ptr,
                 Some(drop_boxed_slice),
                 payload_vec as _,
@@ -503,7 +532,10 @@ impl<'a, P> CoapPduBuilder<'a, P> {
         }
     }
 
-    fn build(self, session: &CoapSession) -> Result<CoapPdu, CoapError> where P: Serialize {
+    fn build(self, session: &CoapSession) -> Result<CoapPdu, CoapError>
+    where
+        P: Serialize,
+    {
         let mut pdu = CoapPdu::new(session, self.method)?;
         if let Some(token) = self.token {
             pdu.add_token(token)?;
@@ -532,14 +564,25 @@ unsafe extern "C" fn handle_response(
     if let Some(user_response_handler) = &USER_RESPONSE_HANDLER {
         let token = CoapToken::from(coap_pdu_get_token(received));
 
-        let mut data_len = 0u32;
+        let mut data_len: c_ulong = 0;
         let mut data_ptr = ptr::null();
-        let mut data_offset = 0u32;
-        let mut data_total = 0u32;
+        let mut data_offset: c_ulong = 0;
+        let mut data_total: c_ulong = 0;
 
-        if coap_get_data_large(received, &mut data_len, &mut data_ptr, &mut data_offset, &mut data_total) == 1 {
+        if coap_get_data_large(
+            received,
+            &mut data_len,
+            &mut data_ptr,
+            &mut data_offset,
+            &mut data_total,
+        ) == 1
+        {
             // TODO: Log failures
-            if let Some(json) = std::str::from_utf8(std::slice::from_raw_parts(data_ptr, data_len as usize)).ok().and_then(|json_text| serde_json::from_str::<serde_json::Value>(json_text).ok()) {
+            if let Some(json) =
+                std::str::from_utf8(std::slice::from_raw_parts(data_ptr, data_len as usize))
+                    .ok()
+                    .and_then(|json_text| serde_json::from_str::<serde_json::Value>(json_text).ok())
+            {
                 user_response_handler(token, json);
             }
         }

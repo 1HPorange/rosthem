@@ -154,7 +154,7 @@ impl CoapContext {
     pub fn run(
         &self,
         timeout_ms: Option<Duration>,
-        handle_response: Option<Box<dyn Fn(CoapToken, serde_json::Value)>>,
+        handle_response: Option<Box<dyn Fn(CoapToken, String)>>,
     ) -> Result<(), CoapError> {
         unsafe {
             USER_RESPONSE_HANDLER = handle_response;
@@ -550,7 +550,7 @@ impl<'a, P> CoapPduBuilder<'a, P> {
     }
 }
 
-static mut USER_RESPONSE_HANDLER: Option<Box<dyn Fn(CoapToken, serde_json::Value)>> = None;
+static mut USER_RESPONSE_HANDLER: Option<Box<dyn Fn(CoapToken, String)>> = None;
 
 unsafe extern "C" fn handle_response(
     _session: *mut coap_session_t,
@@ -577,14 +577,11 @@ unsafe extern "C" fn handle_response(
             &mut data_total,
         ) == 1
         {
-            // TODO: Log failures
-            if let Some(json) =
-                std::str::from_utf8(std::slice::from_raw_parts(data_ptr, data_len as usize))
-                    .ok()
-                    .and_then(|json_text| serde_json::from_str::<serde_json::Value>(json_text).ok())
-            {
-                user_response_handler(token, json);
-            }
+            user_response_handler(
+                token,
+                String::from_utf8_lossy(std::slice::from_raw_parts(data_ptr, data_len as usize))
+                    .into_owned(),
+            );
         }
     }
 

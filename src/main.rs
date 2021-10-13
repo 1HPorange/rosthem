@@ -40,7 +40,7 @@ fn main() -> Result<(), CoapError> {
     session.request_status("65539")?;
     // session.update_light("65539", LightInfo::new().color_preset(LightColorPreset::Yellow))?;
     context.run(IO_FREQUENCY, Some(Box::new(handle_response)))?;
-    
+
     // let pdu = CoapPduBuilder::new(CoapMethod::Put).with_optlist(&optlist);
 
     // const STEPS: usize = 2;
@@ -59,6 +59,6 @@ fn main() -> Result<(), CoapError> {
     Ok(())
 }
 
-fn handle_response(_token: CoapToken, data: serde_json::Value) {
-    let _data = println!("{:?}", serde_json::from_value::<DeviceInfo>(data));
+fn handle_response(_token: CoapToken, data: String) {
+    let _data = println!("{:?}", serde_json::from_str::<DeviceInfo>(&data));
 }

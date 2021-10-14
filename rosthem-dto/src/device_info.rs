@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
-use crate::LightInfo;
+use crate::light::LightInfo;
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

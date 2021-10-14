@@ -1,13 +1,12 @@
 // TODO: Use size_t/usize properly where I failed to do it
 
-pub mod device_info;
 pub mod error;
 mod ffi;
-pub mod light;
 pub mod session_ext;
 
 use self::error::CoapError;
 use ffi::*;
+pub use rosthem_dto;
 use serde::Serialize;
 use std::os::raw::c_ulong;
 use std::rc::Rc;

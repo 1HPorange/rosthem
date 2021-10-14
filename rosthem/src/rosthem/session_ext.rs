@@ -1,4 +1,5 @@
-use crate::{CoapError, CoapOptList, CoapPduBuilder, CoapSession, LightInfo, CoapMethod};
+use crate::{CoapError, CoapMethod, CoapOptList, CoapPduBuilder, CoapSession};
+use rosthem_dto::LightInfo;
 
 const IKEA_GATEWAY_PATH_SEGMENT: &'static str = "15001";
 
@@ -13,8 +14,7 @@ impl CoapSessionExt for CoapSession {
         optlist.add_path_segment(IKEA_GATEWAY_PATH_SEGMENT)?;
         optlist.add_path_segment(id)?;
 
-        let pdu = CoapPduBuilder::new(CoapMethod::Get)
-            .with_optlist(&optlist);
+        let pdu = CoapPduBuilder::new(CoapMethod::Get).with_optlist(&optlist);
 
         self.send_pdu(pdu)?;
 

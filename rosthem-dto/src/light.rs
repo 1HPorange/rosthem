@@ -3,22 +3,16 @@ use prisma::color_space::ConvertToXyz;
 use prisma::encoding::EncodableColor;
 use prisma::FromColor;
 use prisma::{Rgb, XyY};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct LightInfo {
     #[serde(rename = "3311")]
     light_options: [LightOptions; 1],
 }
 
 impl LightInfo {
-    pub fn new() -> Self {
-        Self {
-            light_options: [LightOptions::default()],
-        }
-    }
-
     pub fn on(mut self, on: bool) -> Self {
         self.light_options[0].on_off = Some(if on { 1 } else { 0 });
         self
@@ -51,7 +45,10 @@ impl LightInfo {
     }
 
     pub fn get_color_preset(&self) -> Option<LightColorPreset> {
-        self.light_options[0].color_preset.as_ref().and_then(|p| LightColorPreset::from_hex(p.as_ref()))
+        self.light_options[0]
+            .color_preset
+            .as_ref()
+            .and_then(|p| LightColorPreset::from_hex(p.as_ref()))
     }
 
     pub fn color_xy(mut self, x: u16, y: u16) -> Self {
@@ -62,7 +59,9 @@ impl LightInfo {
     }
 
     pub fn get_color_xy(&self) -> Option<(u16, u16)> {
-        self.light_options[0].color_x.zip(self.light_options[0].color_y)
+        self.light_options[0]
+            .color_x
+            .zip(self.light_options[0].color_y)
     }
 
     pub fn color_rgb(mut self, rgb: &Rgb<f32>) -> Self {

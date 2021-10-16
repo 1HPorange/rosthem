@@ -1,7 +1,7 @@
 use prisma::color_space::named::SRgb;
-use prisma::color_space::ConvertToXyz;
+use prisma::color_space::{ConvertFromXyz, ConvertToXyz};
 use prisma::encoding::EncodableColor;
-use prisma::FromColor;
+use prisma::{FromColor, Xyz};
 use prisma::{Rgb, XyY};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
@@ -70,6 +70,16 @@ impl LightInfo {
         self.light_options[0].color_x = Some((xyz.x() * u16::MAX as f32) as u16);
         self.light_options[0].color_y = Some((xyz.y() * u16::MAX as f32) as u16);
         self
+    }
+
+    pub fn get_color_rgb(&self) -> Option<Rgb<f32>> {
+        let (x, y) = self.get_color_xy()?;
+        let (x, y) = (x as f32 / u16::MAX as f32, y as f32 / u16::MAX as f32);
+        Some(
+            SRgb::new()
+                .convert_from_xyz(&Xyz::new(x, y, 1.0 - x - y))
+                .color_cast(),
+        )
     }
 }
 

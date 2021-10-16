@@ -1,0 +1,12 @@
+/home/orange/projects/rosthem/rosthem-dto/target/debug/deps/proc_macro2-ff07228a1fbc3159.rmeta: /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/lib.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/marker.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/parse.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/detection.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/fallback.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/wrapper.rs
+
+/home/orange/projects/rosthem/rosthem-dto/target/debug/deps/libproc_macro2-ff07228a1fbc3159.rlib: /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/lib.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/marker.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/parse.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/detection.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/fallback.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/wrapper.rs
+
+/home/orange/projects/rosthem/rosthem-dto/target/debug/deps/proc_macro2-ff07228a1fbc3159.d: /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/lib.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/marker.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/parse.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/detection.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/fallback.rs /home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/wrapper.rs
+
+/home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/lib.rs:
+/home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/marker.rs:
+/home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/parse.rs:
+/home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/detection.rs:
+/home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/fallback.rs:
+/home/orange/.cargo/registry/src/github.com-1ecc6299db9ec823/proc-macro2-1.0.30/src/wrapper.rs:

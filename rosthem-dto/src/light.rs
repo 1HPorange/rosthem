@@ -123,8 +123,14 @@ pub enum LightColorPreset {
 }
 
 impl LightColorPreset {
-    fn to_hex(&self) -> &'static str {
+    pub fn to_hex(&self) -> &'static str {
         match self {
+            // Supported by warm/cold bulbs
+            Self::CoolWhite => "f5faf6",
+            Self::WarmWhite => "f1e0b5",
+            Self::WarmGlow => "efd275",
+
+            // Supported only by RGB bulbs
             Self::Blue => "4a418a",
             Self::LightBlue => "6c83ba",
             Self::SaturatedPurple => "8f2686",
@@ -141,14 +147,11 @@ impl LightColorPreset {
             Self::LightPink => "e8bedd",
             Self::CoolDaylight => "eaf6fb",
             Self::Candlelight => "ebb63e",
-            Self::WarmGlow => "efd275",
-            Self::WarmWhite => "f1e0b5",
             Self::Sunrise => "f2eccf",
-            Self::CoolWhite => "f5faf6",
         }
     }
 
-    fn from_hex(hex: &str) -> Option<Self> {
+    pub fn from_hex(hex: &str) -> Option<Self> {
         match hex {
             "4a418a" => Some(Self::Blue),
             "6c83ba" => Some(Self::LightBlue),
@@ -172,5 +175,30 @@ impl LightColorPreset {
             "f5faf6" => Some(Self::CoolWhite),
             _ => None,
         }
+    }
+
+    pub fn all() -> &'static [LightColorPreset] {
+        &[
+            Self::CoolWhite,
+            Self::WarmWhite,
+            Self::WarmGlow,
+            Self::Blue,
+            Self::LightBlue,
+            Self::SaturatedPurple,
+            Self::Lime,
+            Self::LightPurple,
+            Self::Yellow,
+            Self::SaturatedPink,
+            Self::DarkPeach,
+            Self::SaturatedRed,
+            Self::ColdSky,
+            Self::Pink,
+            Self::Peach,
+            Self::WarmAmber,
+            Self::LightPink,
+            Self::CoolDaylight,
+            Self::Candlelight,
+            Self::Sunrise,
+        ]
     }
 }
